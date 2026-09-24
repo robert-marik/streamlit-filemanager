@@ -1,0 +1,6 @@
+include LICENSE README.md example_app.py
+recursive-include tests *.py
+recursive-include st_filemanager/frontend *.html *.css *.js
+recursive-include st_filemanager/locales *.json
+include st_filemanager/py.typed
+prune demo_data

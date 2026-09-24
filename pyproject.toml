@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "streamlit-filemanager"
+dynamic = ["version"]
+description = "File manager component for Streamlit: browse, upload, download, rename, move, delete and preview files, inline or inside st.dialog."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Robert Mařík", email = "robert.marik.cz@gmail.com" }]
+requires-python = ">=3.10"
+dependencies = ["streamlit>=1.51"]
+keywords = ["streamlit", "streamlit-component", "file-manager", "file-browser", "upload"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Framework :: Streamlit",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Filesystems",
+    "Typing :: Typed",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["st_filemanager*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "st_filemanager.__version__" }
+
+[tool.setuptools.package-data]
+st_filemanager = ["frontend/*.html", "frontend/*.css", "frontend/*.js", "locales/*.json", "py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
