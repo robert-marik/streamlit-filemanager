@@ -120,6 +120,15 @@ def test_quota(fm):
     assert (fm.root / "ok.bin").read_bytes() == b"y" * 10
 
 
+def test_custom_usage(fm):
+    fm.quota, fm.usage = 100, lambda: 95
+    assert fm.used_bytes() == 95
+    with pytest.raises(FileManagerError) as ei:
+        fm.upload("", [("big.bin", b"x" * 6)])
+    assert ei.value.code == "quota_exceeded"
+    fm.upload("", [("ok.bin", b"x" * 5)])
+
+
 def test_upload_rules(fm):
     fm.allowed_extensions = frozenset({"txt"})
     fm.max_upload_size = 4

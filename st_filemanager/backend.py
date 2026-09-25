@@ -14,6 +14,7 @@ import re
 import shutil
 import stat
 import zipfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -87,6 +88,9 @@ class FileManager:
     show_hidden: bool = False
     max_upload_size: int | None = None
     allowed_extensions: frozenset[str] | None = None
+    # Custom usage counter for the quota, e.g. when root is a subdirectory of
+    # the user's storage: ``usage=lambda: tree_size("/data/user1")``.
+    usage: Callable[[], int] | None = None
 
     def __post_init__(self) -> None:
         self.root = Path(self.root).expanduser().resolve()
@@ -148,7 +152,7 @@ class FileManager:
 
     # ------------------------------------------------------------------ quota
     def used_bytes(self) -> int:
-        return _tree_size(self.root)
+        return self.usage() if self.usage is not None else tree_size(self.root)
 
     def _ensure_space(self, extra: int) -> None:
         if self.quota is None:
@@ -253,7 +257,7 @@ class FileManager:
 
     def copy(self, rels: list[str], rel_dest: str) -> int:
         pairs = self._transfer_targets(rels, rel_dest)
-        self._ensure_space(sum(_tree_size(s) for s, _ in pairs))
+        self._ensure_space(sum(tree_size(s) for s, _ in pairs))
         for src, dst in pairs:
             dst = _unique(dst)
             if src.is_dir() and not src.is_symlink():
@@ -359,9 +363,10 @@ def _looks_binary(raw: bytes) -> bool:
     return ctrl / len(sample) > 0.05
 
 
-def _tree_size(p: Path) -> int:
+def tree_size(p: str | Path) -> int:
+    """Total size in bytes of the files under ``p`` (symlinks not followed)."""
     try:
-        st = p.lstat()
+        st = os.lstat(p)
     except OSError:
         return 0
     if not stat.S_ISDIR(st.st_mode):

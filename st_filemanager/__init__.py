@@ -7,7 +7,7 @@ Usage::
     file_manager("/data/user1", quota="500MB")
 """
 
-from .backend import FileManager, FileManagerError, parse_size
+from .backend import FileManager, FileManagerError, parse_size, tree_size
 from .component import file_manager
 from .i18n import available_languages, message_keys, register_translation
 
@@ -21,5 +21,6 @@ __all__ = [
     "file_manager",
     "message_keys",
     "parse_size",
+    "tree_size",
     "register_translation",
 ]

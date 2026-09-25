@@ -6,7 +6,7 @@ import base64
 import binascii
 import logging
 from pathlib import Path
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 import streamlit as st
@@ -124,6 +124,7 @@ def file_manager(
     allowed_extensions: list[str] | None = None,
     lang: str | None = None,
     translations: Mapping[str, Message] | None = None,
+    usage: Callable[[], int] | None = None,
 ) -> dict | None:
     """Render a file manager confined to ``root``.
 
@@ -143,6 +144,9 @@ def file_manager(
         when no translation is available; see ``available_languages()``.
     translations : per-instance message overrides, e.g. ``{"upload": "Add files"}``.
         Keys are listed by ``message_keys()``.
+    usage : callable returning the bytes counted against ``quota``; defaults to
+        the size of ``root``. Use it when ``root`` is only part of the user's
+        storage, e.g. ``usage=lambda: tree_size("/data/user1")``.
 
     Returns
     -------
@@ -156,6 +160,7 @@ def file_manager(
         show_hidden=show_hidden,
         max_upload_size=parse_size(max_upload_size),
         allowed_extensions=frozenset(allowed_extensions) if allowed_extensions is not None else None,
+        usage=usage,
     )
     state = _state(key)
     if lang is None:
