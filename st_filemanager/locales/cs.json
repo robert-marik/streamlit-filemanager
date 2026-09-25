@@ -36,7 +36,7 @@
   "newName": "Nový název",
   "conflictTitle": "Soubory již existují",
   "conflictText": "V cílové složce už existuje: {names}",
-  "quota": "Využito {used} z {limit}",
+  "quota": "Využito {used} z {limit} ({pct} %)",
   "readOnly": "Pouze pro čtení",
   "clipboard": {"one": "{n} položka ve schránce", "few": "{n} položky ve schránce", "other": "{n} položek ve schránce"},
   "clear": "Vyprázdnit",
@@ -67,5 +67,10 @@
   "deleted": {"one": "Smazána {n} položka.", "few": "Smazány {n} položky.", "other": "Smazáno {n} položek."},
   "moved": {"one": "Přesunuta {n} položka.", "few": "Přesunuty {n} položky.", "other": "Přesunuto {n} položek."},
   "copied": {"one": "Zkopírována {n} položka.", "few": "Zkopírovány {n} položky.", "other": "Zkopírováno {n} položek."},
-  "uploaded": {"one": "Nahrán {n} soubor.", "few": "Nahrány {n} soubory.", "other": "Nahráno {n} souborů."}
+  "uploaded": {"one": "Nahrán {n} soubor.", "few": "Nahrány {n} soubory.", "other": "Nahráno {n} souborů."},
+  "edit": "Upravit",
+  "save": "Uložit",
+  "saved": "Soubor „{name}“ uložen.",
+  "unsavedChanges": "Neuložené změny – uložte je (Ctrl+S), nebo znovu zavřete a zahoďte.",
+  "changed_on_disk": "Soubor „{name}“ mezitím změnil někdo jiný. Zkopírujte si úpravy, zavřete a soubor otevřete znovu."
 }

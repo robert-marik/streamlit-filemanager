@@ -217,6 +217,7 @@
   font-family: var(--st-code-font, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
   font-size: 12.5px; line-height: 1.55; tab-size: 4; white-space: pre;
 }
+.pv-edit { border: 0; outline: none; resize: none; color: var(--fm-text); background: var(--fm-bg); }
 .pv-text code { font: inherit; background: none; padding: 0; }
 
 /* highlight.js tokens (GitHub-like, light + dark) */

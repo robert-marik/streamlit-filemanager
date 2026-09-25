@@ -66,6 +66,7 @@ example `{"op": "upload", "ok": True, "paths": ["report.pdf"]}` or
 - Download a file directly, or a folder / several items as a ZIP
 - New folder, rename, delete (with confirmation), cut / copy / paste, drag rows onto a folder to move (Ctrl = copy)
 - Preview of images and text / source code with syntax highlighting
+- In-place editing of UTF-8 text files (YAML, CSV, TXT, README, …) from the preview; Ctrl+S saves
 - Context menu and keyboard shortcuts: Enter, Backspace, Delete, F2, F5, Ctrl+A/C/X/V/F, arrow keys
 - Quota indicator, light and dark theme following the Streamlit theme
 - Localizable UI (English and Czech bundled)

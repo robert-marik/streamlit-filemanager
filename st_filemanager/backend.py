@@ -322,7 +322,8 @@ class FileManager:
         if not p.is_file():
             raise FileManagerError("not_a_file", name=p.name)
         ext = ext_of(p.name)
-        size = p.stat().st_size
+        st = p.stat()
+        size = st.st_size
         if ext in IMAGE_EXTS:
             if size > PREVIEW_IMAGE_LIMIT:
                 raise FileManagerError("preview_too_large", name=p.name)
@@ -345,6 +346,9 @@ class FileManager:
                 if _looks_binary(raw):
                     raise FileManagerError("no_preview", name=p.name) from None
             text = raw.decode("utf-8", errors="replace") if truncated else raw.decode("latin-1")
+            editable = False
+        else:
+            editable = not truncated
         return {
             "kind": "text",
             "name": p.name,
@@ -352,7 +356,27 @@ class FileManager:
             "text": text,
             "lang": HLJS_LANG.get(ext, ext or "plaintext"),
             "truncated": truncated,
+            "editable": editable,
+            "mtime": st.st_mtime,
         }
+
+    def save_text(self, rel: str, text: str, mtime: float | None = None) -> None:
+        """Overwrite an existing text file with ``text`` (UTF-8).
+
+        ``mtime`` is the modification time the editor started from; if the file
+        changed since then, the save is refused instead of losing that change.
+        """
+        p = self._existing(rel)
+        if not p.is_file():
+            raise FileManagerError("not_a_file", name=p.name)
+        # ponytail: check-then-write race window of microseconds, add a file lock if concurrent editing is common
+        if mtime is not None and p.stat().st_mtime != mtime:
+            raise FileManagerError("changed_on_disk", name=p.name)
+        data = text.encode("utf-8")
+        if len(data) > PREVIEW_TEXT_LIMIT:
+            raise FileManagerError("too_large", name=p.name, max=PREVIEW_TEXT_LIMIT)
+        self._ensure_space(len(data) - p.stat().st_size)
+        p.write_bytes(data)
 
 
 def _looks_binary(raw: bytes) -> bool:

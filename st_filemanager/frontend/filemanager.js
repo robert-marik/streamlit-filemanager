@@ -492,7 +492,7 @@ class FileManagerApp {
       bar.style.width = `${pct}%`;
       this.el.quota.classList.toggle("warn", pct >= 75 && pct < 90);
       this.el.quota.classList.toggle("full", pct >= 90);
-      this.el.quota.querySelector(".qtext").innerHTML = this.t("quota", { used: q.used, limit: q.limit });
+      this.el.quota.querySelector(".qtext").innerHTML = this.t("quota", { used: q.used, limit: q.limit, pct: Math.round(pct) });
       this.el.quota.title = `${pct.toFixed(1)} %`;
     }
   }
@@ -670,12 +670,15 @@ class FileManagerApp {
   clearDropTargets() { this.root.querySelectorAll(".drop-target").forEach((x) => x.classList.remove("drop-target")); }
 
   // ------------------------------------------------------------- modals
-  openModal(html, { wide = false, onKey } = {}) {
+  openModal(html, { wide = false, onKey, canClose } = {}) {
     const layer = this.el.modal;
     layer.innerHTML = `<div class="modal${wide ? " wide" : ""}" role="dialog" aria-modal="true">${html}</div>`;
     layer.hidden = false;
     const modal = layer.firstElementChild;
-    const close = () => { layer.hidden = true; layer.innerHTML = ""; this.el.body.focus({ preventScroll: true }); };
+    const close = () => {
+      if (canClose && !canClose()) return;
+      layer.hidden = true; layer.innerHTML = ""; this.el.body.focus({ preventScroll: true });
+    };
     layer.onmousedown = (e) => { if (e.target === layer) close(); };
     modal.onkeydown = (e) => {
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); return; }
@@ -722,14 +725,38 @@ class FileManagerApp {
     const meta = `<span class="muted">${this.fmtSize(p.size)}</span>`;
     const head = `<div class="pv-head">${icon(p.kind === "image" ? "image" : "code")}<h3 title="${esc(p.name)}">${esc(p.name)}</h3>${meta}
       <span class="grow"></span>
+      ${p.editable && !this.data?.readOnly ? `<button class="btn" data-edit>${icon("rename")}<span>${this.t("edit")}</span></button><button class="btn primary" data-save hidden>${this.t("save")}</button>` : ""}
       <button class="btn icon-only" data-dl title="${this.t("download")}">${icon("download")}</button>
       <button class="btn icon-only" data-close title="${this.t("close")}">${icon("close")}</button></div>`;
     let body;
     if (p.kind === "image") body = `<div class="pv-image"><img alt="${esc(p.name)}" src="${p.src}"></div>`;
     else body = `${p.truncated ? `<p class="pv-note">${this.t("truncated")}</p>` : ""}<pre class="pv-text"><code class="hljs">${esc(p.text)}</code></pre>`;
     const path = joinPath(this.cwd, p.name);
-    const { modal } = this.openModal(head + body, { wide: true });
+    let editor = null, warned = false;
+    const dirty = () => editor && editor.value !== p.text.replace(/\r\n/g, "\n");
+    const save = () => {
+      if (!editor) return;
+      const text = p.text.includes("\r\n") ? editor.value.replace(/\n/g, "\r\n") : editor.value;
+      this.send("save", { path, text, mtime: p.mtime });
+    };
+    const { modal } = this.openModal(head + body, {
+      wide: true,
+      onKey: (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); save(); } },
+      // first close attempt with unsaved edits only warns, the second discards them
+      canClose: () => !dirty() || warned || ((warned = true), this.toast("error", this.t("unsavedChanges")), false),
+    });
     modal.querySelector("[data-dl]").addEventListener("click", () => this.send("download", { paths: [path] }));
+    modal.querySelector("[data-save]")?.addEventListener("click", save);
+    modal.querySelector("[data-edit]")?.addEventListener("click", (e) => {
+      e.currentTarget.hidden = true;
+      modal.querySelector("[data-save]").hidden = false;
+      editor = document.createElement("textarea");
+      editor.className = "pv-text pv-edit";
+      editor.spellcheck = false;
+      editor.value = p.text;
+      modal.querySelector(".pv-text").replaceWith(editor);
+      editor.focus();
+    });
     modal.querySelector("[data-close]").focus();
     if (p.kind === "text" && p.lang !== "plaintext" && p.text.length <= HIGHLIGHT_LIMIT) {
       try {

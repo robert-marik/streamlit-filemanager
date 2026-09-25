@@ -52,7 +52,7 @@ def _handle(fm: FileManager, state: dict, action: dict, read_only: bool) -> None
     cwd = state["cwd"]
     flash: dict[str, Any] = {"id": action.get("id")}
     result: dict[str, Any] = {"op": op, "ok": True}
-    mutating = {"mkdir", "rename", "delete", "move", "copy", "upload"}
+    mutating = {"mkdir", "rename", "delete", "move", "copy", "upload", "save"}
     try:
         if op in mutating and read_only:
             raise FileManagerError("read_only")
@@ -98,6 +98,11 @@ def _handle(fm: FileManager, state: dict, action: dict, read_only: bool) -> None
         elif op == "preview":
             flash["preview"] = fm.preview(action["path"])
             result["path"] = action["path"]
+        elif op == "save":
+            fm.save_text(action["path"], action["text"], action.get("mtime"))
+            result["path"] = action["path"]
+            flash["preview"] = fm.preview(action["path"])
+            flash["notice"] = {"type": "success", "code": "saved", "params": {"name": Path(action["path"]).name}}
         else:
             raise FileManagerError("unknown_op", op=op)
     except FileManagerError as e:
@@ -134,7 +139,7 @@ def file_manager(
     quota : max total size of ``root`` in bytes or as "500MB"/"2GB"; None = unlimited.
     key : unique widget key (use different keys for several instances).
     height : component height in pixels.
-    read_only : disable upload / rename / delete / mkdir / move / copy.
+    read_only : disable upload / rename / delete / mkdir / move / copy / edit.
     show_hidden : list dot-files.
     max_upload_size : per-file upload limit. Uploads travel over the Streamlit
         websocket as base64, so keep this below ``server.maxMessageSize`` / 1.4.

@@ -36,7 +36,7 @@
   "newName": "New name",
   "conflictTitle": "Files already exist",
   "conflictText": "The folder already contains: {names}",
-  "quota": "{used} of {limit} used",
+  "quota": "{used} of {limit} used ({pct} %)",
   "readOnly": "Read only",
   "clipboard": {"one": "{n} item on clipboard", "other": "{n} items on clipboard"},
   "clear": "Clear",
@@ -67,5 +67,10 @@
   "deleted": {"one": "Deleted {n} item.", "other": "Deleted {n} items."},
   "moved": {"one": "Moved {n} item.", "other": "Moved {n} items."},
   "copied": {"one": "Copied {n} item.", "other": "Copied {n} items."},
-  "uploaded": {"one": "Uploaded {n} file.", "other": "Uploaded {n} files."}
+  "uploaded": {"one": "Uploaded {n} file.", "other": "Uploaded {n} files."},
+  "edit": "Edit",
+  "save": "Save",
+  "saved": "Saved “{name}”.",
+  "unsavedChanges": "Unsaved changes – save them (Ctrl+S) or close again to discard.",
+  "changed_on_disk": "“{name}” was changed by someone else since you opened it. Copy your edits, close and reopen the file."
 }

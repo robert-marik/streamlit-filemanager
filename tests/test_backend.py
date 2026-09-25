@@ -156,3 +156,24 @@ def test_preview(fm):
     (fm.root / "bin.dat").write_bytes(bytes(range(256)) * 10)
     with pytest.raises(FileManagerError):
         fm.preview("bin.dat")
+
+
+def test_save_text(fm):
+    p = fm.preview("sub/b.py")
+    assert p["editable"]
+    fm.save_text("sub/b.py", "x = 1\n")
+    assert (fm.root / "sub/b.py").read_text() == "x = 1\n"
+    with pytest.raises(FileManagerError):
+        fm.save_text("sub", "x")
+    with pytest.raises(FileManagerError):
+        fm.save_text("../escape.txt", "x")
+
+
+def test_save_text_detects_external_change(fm):
+    mtime = fm.preview("sub/b.py")["mtime"]
+    fm.save_text("sub/b.py", "mine\n", mtime)  # unchanged -> ok
+    os.utime(fm.root / "sub/b.py", (0, mtime + 5))  # someone else edits it
+    with pytest.raises(FileManagerError) as e:
+        fm.save_text("sub/b.py", "stale\n", mtime)
+    assert e.value.code == "changed_on_disk"
+    assert (fm.root / "sub/b.py").read_text() == "mine\n"
