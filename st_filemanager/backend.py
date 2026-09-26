@@ -204,6 +204,19 @@ class FileManager:
         target.mkdir()
         return self.rel(target)
 
+    def create_file(self, rel_dir: str, name: str, text: str = "") -> str:
+        """Create a new text file (UTF-8), e.g. from pasted clipboard content."""
+        target = self._dir(rel_dir) / self.check_name(name)
+        if os.path.lexists(target):
+            raise FileManagerError("exists", name=name)
+        data = text.encode("utf-8")
+        if len(data) > PREVIEW_TEXT_LIMIT:
+            raise FileManagerError("too_large", name=name, max=PREVIEW_TEXT_LIMIT)
+        self._ensure_space(len(data))
+        with open(target, "xb") as f:  # "x": never overwrite a file created meanwhile
+            f.write(data)
+        return self.rel(target)
+
     def rename(self, rel: str, new_name: str) -> str:
         src = self._existing(rel)
         if src == self.root:

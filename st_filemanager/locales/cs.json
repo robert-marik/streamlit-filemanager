@@ -72,5 +72,9 @@
   "save": "Uložit",
   "saved": "Soubor „{name}“ uložen.",
   "unsavedChanges": "Neuložené změny – uložte je (Ctrl+S), nebo znovu zavřete a zahoďte.",
-  "changed_on_disk": "Soubor „{name}“ mezitím změnil někdo jiný. Zkopírujte si úpravy, zavřete a soubor otevřete znovu."
+  "changed_on_disk": "Soubor „{name}“ mezitím změnil někdo jiný. Zkopírujte si úpravy, zavřete a soubor otevřete znovu.",
+  "newFile": "Nový soubor",
+  "fileName": "Název souboru",
+  "fileContent": "Obsah (vložte ze schránky Ctrl+V)",
+  "fileCreated": "Soubor „{name}“ vytvořen."
 }

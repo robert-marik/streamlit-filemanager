@@ -82,7 +82,7 @@ before each operation that adds data, so keep it reasonably fast.
 - Browsing folders with breadcrumbs, a search filter, and sorting by name, size or date (folders stay on top)
 - Upload with the button or drag & drop, with an overwrite / keep-both prompt on name clashes
 - Download a file directly, or a folder / several items as a ZIP
-- New folder, rename, delete (with confirmation), cut / copy / paste, drag rows onto a folder to move (Ctrl = copy)
+- New folder, new file (paste text from the clipboard and save it; Ctrl+Enter creates), rename, delete (with confirmation), cut / copy / paste, drag rows onto a folder to move (Ctrl = copy)
 - Preview of images and text / source code with syntax highlighting
 - In-place editing of UTF-8 text files (YAML, CSV, TXT, README, …) from the preview; Ctrl+S saves.
   A save is refused if the file changed on disk since it was opened.
@@ -108,7 +108,8 @@ On macOS, Cmd works in place of Ctrl.
 | Esc | Clear the selection or close the context menu |
 
 In the search filter, Esc clears it and ↓ moves to the list. In dialogs, Esc closes
-and Enter confirms. In the text editor, Ctrl+S saves.
+and Enter confirms. In the text editor, Ctrl+S saves. In the new-file dialog, Enter adds
+a line to the content and Ctrl+Enter (or Ctrl+S) creates the file.
 
 ## Localization
 
@@ -156,6 +157,7 @@ the values and set `_language` to the language's own name.
 - Syntax highlighting loads highlight.js from cdn.jsdelivr.net. Offline, text is shown unhighlighted.
 - Whole folders cannot be uploaded, only files.
 - Text preview shows the first 1 MB; truncated or non-UTF-8 files cannot be edited.
+- A new file created from pasted text is limited to 1 MB and is saved as UTF-8.
   Images larger than 10 MB are not previewed.
 
 ## Development

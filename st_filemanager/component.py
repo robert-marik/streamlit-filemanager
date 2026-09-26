@@ -52,7 +52,7 @@ def _handle(fm: FileManager, state: dict, action: dict, read_only: bool) -> None
     cwd = state["cwd"]
     flash: dict[str, Any] = {"id": action.get("id")}
     result: dict[str, Any] = {"op": op, "ok": True}
-    mutating = {"mkdir", "rename", "delete", "move", "copy", "upload", "save"}
+    mutating = {"mkdir", "rename", "delete", "move", "copy", "upload", "save", "newfile"}
     try:
         if op in mutating and read_only:
             raise FileManagerError("read_only")
@@ -67,6 +67,10 @@ def _handle(fm: FileManager, state: dict, action: dict, read_only: bool) -> None
             result["path"] = fm.mkdir(cwd, action["name"])
             flash["select"] = [Path(result["path"]).name]
             flash["notice"] = {"type": "success", "code": "created", "params": {"name": action["name"]}}
+        elif op == "newfile":
+            result["path"] = fm.create_file(cwd, action["name"], action.get("text", ""))
+            flash["select"] = [Path(result["path"]).name]
+            flash["notice"] = {"type": "success", "code": "fileCreated", "params": {"name": action["name"]}}
         elif op == "rename":
             result["path"] = fm.rename(action["path"], action["name"])
             result["from"] = action["path"]
@@ -139,7 +143,7 @@ def file_manager(
     quota : max total size of ``root`` (or of what ``usage`` counts) in bytes or as "500MB"/"2GB"; None = unlimited.
     key : unique widget key (use different keys for several instances).
     height : component height in pixels.
-    read_only : disable upload / rename / delete / mkdir / move / copy / edit.
+    read_only : disable upload / rename / delete / mkdir / new file / move / copy / edit.
     show_hidden : list dot-files.
     max_upload_size : per-file upload limit. Uploads travel over the Streamlit
         websocket as base64, so keep this below ``server.maxMessageSize`` / 1.4.

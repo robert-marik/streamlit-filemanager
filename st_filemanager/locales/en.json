@@ -72,5 +72,9 @@
   "save": "Save",
   "saved": "Saved “{name}”.",
   "unsavedChanges": "Unsaved changes – save them (Ctrl+S) or close again to discard.",
-  "changed_on_disk": "“{name}” was changed by someone else since you opened it. Copy your edits, close and reopen the file."
+  "changed_on_disk": "“{name}” was changed by someone else since you opened it. Copy your edits, close and reopen the file.",
+  "newFile": "New file",
+  "fileName": "File name",
+  "fileContent": "Content (paste from clipboard with Ctrl+V)",
+  "fileCreated": "File “{name}” created."
 }

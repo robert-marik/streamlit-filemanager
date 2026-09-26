@@ -26,6 +26,7 @@ const ICON_PATHS = {
   upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/>',
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/>',
   newFolder: '<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10v6M9 13h6"/>',
+  newFile: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 11v6M9 14h6"/>',
   rename: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   delete: '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
   cut: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/>',
@@ -56,6 +57,7 @@ const PREVIEWABLE = new Set(["image", "code", "text", "table"]);
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const joinPath = (dir, name) => (dir ? `${dir}/${name}` : name);
+const badName = (v) => !v || v === "." || v === ".." || /[\/\\\0]/.test(v);
 
 class FileManagerApp {
   constructor(parent) {
@@ -109,6 +111,7 @@ class FileManagerApp {
         <button data-act="up" class="btn icon-only">${icon("up")}</button>
         <span class="sep"></span>
         <button data-act="newFolder" class="btn w">${icon("newFolder")}<span></span></button>
+        <button data-act="newFile" class="btn w">${icon("newFile")}<span></span></button>
         <button data-act="upload" class="btn w">${icon("upload")}<span></span></button>
         <button data-act="download" class="btn w">${icon("download")}<span></span></button>
         <span class="sep w"></span>
@@ -461,6 +464,7 @@ class FileManagerApp {
     };
     set("up", !!this.cwd);
     set("newFolder", true, ro);
+    set("newFile", true, ro);
     set("upload", true, ro);
     set("download", n > 0);
     set("rename", n === 1, ro);
@@ -562,7 +566,7 @@ class FileManagerApp {
 
   command(act) {
     const ro = this.data?.readOnly;
-    const writeOps = ["newFolder", "upload", "rename", "cut", "copy", "paste", "delete"];
+    const writeOps = ["newFolder", "newFile", "upload", "rename", "cut", "copy", "paste", "delete"];
     if (ro && writeOps.includes(act)) return;
     const n = this.selection.size;
     switch (act) {
@@ -571,6 +575,7 @@ class FileManagerApp {
       case "newFolder":
         this.prompt(this.t("newFolder"), this.t("folderName"), "", this.t("create"), (name) => this.send("mkdir", { name }));
         break;
+      case "newFile": this.newFile(); break;
       case "upload": this.el.file.click(); break;
       case "download": if (n) this.send("download", { paths: this.selectedPaths() }); break;
       case "open": case "preview": if (n === 1) this.openEntry(this.entry([...this.selection][0])); break;
@@ -651,7 +656,7 @@ class FileManagerApp {
         items.push("-", ["delete", "delete", "danger"]);
       }
     } else {
-      if (!ro) items.push(["newFolder", "newFolder"], ["upload", "upload"]);
+      if (!ro) items.push(["newFolder", "newFolder"], ["newFile", "newFile"], ["upload", "upload"]);
       if (!ro && this.clipboard) items.push(["paste", "paste"]);
       if (items.length) items.push("-");
       items.push(["selectAll", "copy"], ["refresh", "refresh"]);
@@ -698,6 +703,29 @@ class FileManagerApp {
     primary?.focus();
   }
 
+  newFile() {
+    const { modal, close } = this.openModal(`
+      <h3>${this.t("newFile")}</h3>
+      <label class="field"><span>${this.t("fileName")}</span><input type="text" spellcheck="false" value="new.txt"></label>
+      <p class="field-error" hidden></p>
+      <label class="field"><span>${this.t("fileContent")}</span><textarea rows="12" spellcheck="false"></textarea></label>
+      <div class="modal-actions"><button class="btn" data-close>${this.t("cancel")}</button><button class="btn primary" data-ok>${this.t("create")}</button></div>`,
+      { wide: true, onKey: (e) => { if ((e.ctrlKey || e.metaKey) && (e.key === "Enter" || e.key.toLowerCase() === "s")) { e.preventDefault(); submit(); } } });
+    const input = modal.querySelector("input");
+    const submit = () => {
+      const name = input.value.trim();
+      if (badName(name)) {
+        const err = modal.querySelector(".field-error");
+        err.hidden = false; err.innerHTML = this.t("invalid_name", { name }); input.focus(); return;
+      }
+      const text = modal.querySelector("textarea").value;
+      close();
+      this.send("newfile", { name, text });
+    };
+    modal.querySelector("[data-ok]").addEventListener("click", submit);
+    modal.querySelector("textarea").focus();
+  }
+
   prompt(title, label, value, okLabel, onOk) {
     const { modal, close } = this.openModal(`
       <h3>${esc(title)}</h3>
@@ -709,7 +737,7 @@ class FileManagerApp {
     const err = modal.querySelector(".field-error");
     const submit = () => {
       const v = input.value.trim();
-      if (!v || v === "." || v === ".." || /[\/\\\0]/.test(v)) {
+      if (badName(v)) {
         err.hidden = false; err.innerHTML = this.t("invalid_name", { name: v }); input.focus(); return;
       }
       close();

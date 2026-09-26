@@ -177,3 +177,13 @@ def test_save_text_detects_external_change(fm):
         fm.save_text("sub/b.py", "stale\n", mtime)
     assert e.value.code == "changed_on_disk"
     assert (fm.root / "sub/b.py").read_text() == "mine\n"
+
+
+def test_create_file(fm):
+    assert fm.create_file("sub", "pasted.csv", "a,b\n1,2\n") == "sub/pasted.csv"
+    assert (fm.root / "sub/pasted.csv").read_text() == "a,b\n1,2\n"
+    with pytest.raises(FileManagerError) as e:
+        fm.create_file("sub", "pasted.csv", "x")
+    assert e.value.code == "exists"
+    with pytest.raises(FileManagerError):
+        fm.create_file("", "../escape.txt", "x")
