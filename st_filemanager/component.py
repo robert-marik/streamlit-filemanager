@@ -136,7 +136,7 @@ def file_manager(
     Parameters
     ----------
     root : directory the user may manage (created if missing).
-    quota : max total size of ``root`` in bytes or as "500MB"/"2GB"; None = unlimited.
+    quota : max total size of ``root`` (or of what ``usage`` counts) in bytes or as "500MB"/"2GB"; None = unlimited.
     key : unique widget key (use different keys for several instances).
     height : component height in pixels.
     read_only : disable upload / rename / delete / mkdir / move / copy / edit.

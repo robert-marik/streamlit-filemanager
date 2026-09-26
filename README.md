@@ -45,7 +45,7 @@ if st.button("Open files"):
 | Parameter | Default | Description |
 |---|---|---|
 | `root` | required | Directory the user may manage (created if missing). Nothing outside it is reachable. |
-| `quota` | `None` | Maximum total size of `root`, in bytes or as `"500MB"`, `"2 GB"`. `None` = unlimited. |
+| `quota` | `None` | Maximum total size of `root` (or of what `usage` counts), in bytes or as `"500MB"`, `"2 GB"`. `None` = unlimited. |
 | `key` | `"file_manager"` | Widget key. Use different keys for multiple instances. |
 | `height` | `520` | Height in pixels. |
 | `read_only` | `False` | Hide and reject every modifying operation. |
@@ -54,10 +54,28 @@ if st.button("Open files"):
 | `allowed_extensions` | `None` | e.g. `["pdf", "png"]` to restrict uploads. |
 | `lang` | `None` | UI language (BCP 47 tag). `None` = browser locale, falling back to English. |
 | `translations` | `None` | Per-instance message overrides, e.g. `{"upload": "Add files"}`. |
+| `usage` | `None` | Callable returning the bytes counted against `quota`. `None` = size of `root`. See [Custom quota usage](#custom-quota-usage). |
 
 The function returns a description of the operation performed during this run, for
 example `{"op": "upload", "ok": True, "paths": ["report.pdf"]}` or
 `{"op": "delete", "ok": False, "error": "quota_exceeded", "params": {...}}`, or `None`.
+
+### Custom quota usage
+
+By default the quota is checked against the size of `root`. When `root` is only part
+of the user's storage, or usage comes from elsewhere (a database, a disk quota tool),
+pass `usage`, a callable with no arguments that returns the number of bytes used:
+
+```python
+from st_filemanager import file_manager, tree_size
+
+# The user manages /data/user1/projects, but the quota covers all of /data/user1.
+file_manager("/data/user1/projects", quota="1GB", usage=lambda: tree_size("/data/user1"))
+```
+
+`tree_size(path)` returns the total size of the regular files under `path` without
+following symlinks. `usage` is called on every rerun (for the quota indicator) and
+before each operation that adds data, so keep it reasonably fast.
 
 ## Features
 
@@ -66,10 +84,31 @@ example `{"op": "upload", "ok": True, "paths": ["report.pdf"]}` or
 - Download a file directly, or a folder / several items as a ZIP
 - New folder, rename, delete (with confirmation), cut / copy / paste, drag rows onto a folder to move (Ctrl = copy)
 - Preview of images and text / source code with syntax highlighting
-- In-place editing of UTF-8 text files (YAML, CSV, TXT, README, …) from the preview; Ctrl+S saves
-- Context menu and keyboard shortcuts: Enter, Backspace, Delete, F2, F5, Ctrl+A/C/X/V/F, arrow keys
+- In-place editing of UTF-8 text files (YAML, CSV, TXT, README, …) from the preview; Ctrl+S saves.
+  A save is refused if the file changed on disk since it was opened.
+- Context menu and [keyboard shortcuts](#keyboard-shortcuts)
 - Quota indicator, light and dark theme following the Streamlit theme
 - Localizable UI (English and Czech bundled)
+
+## Keyboard shortcuts
+
+On macOS, Cmd works in place of Ctrl.
+
+| Key | Action |
+|---|---|
+| ↑ / ↓ | Move through the list; with Shift, extend the selection |
+| Enter | Open the selected folder or preview the selected file |
+| Backspace, Alt+← | Go up one folder |
+| Delete | Delete the selection (asks for confirmation) |
+| F2 | Rename |
+| F5 | Refresh |
+| Ctrl+A | Select all |
+| Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut / paste |
+| Ctrl+F | Focus the search filter |
+| Esc | Clear the selection or close the context menu |
+
+In the search filter, Esc clears it and ↓ moves to the list. In dialogs, Esc closes
+and Enter confirms. In the text editor, Ctrl+S saves.
 
 ## Localization
 
@@ -116,6 +155,8 @@ the values and set `_language` to the language's own name.
   the sizes of downloads below `server.maxMessageSize` (default 200 MB) divided by about 1.4.
 - Syntax highlighting loads highlight.js from cdn.jsdelivr.net. Offline, text is shown unhighlighted.
 - Whole folders cannot be uploaded, only files.
+- Text preview shows the first 1 MB; truncated or non-UTF-8 files cannot be edited.
+  Images larger than 10 MB are not previewed.
 
 ## Development
 
