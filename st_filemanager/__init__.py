@@ -11,7 +11,7 @@ from .backend import FileManager, FileManagerError, parse_size, tree_size
 from .component import file_manager
 from .i18n import available_languages, message_keys, register_translation
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "FileManager",
