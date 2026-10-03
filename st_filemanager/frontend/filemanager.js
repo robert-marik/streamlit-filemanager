@@ -57,6 +57,21 @@ const PREVIEWABLE = new Set(["image", "code", "text", "table"]);
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const joinPath = (dir, name) => (dir ? `${dir}/${name}` : name);
+// path relative to the upload folder: "a.txt" or "dir/sub/a.txt" for folder uploads
+const relPath = (f) => f.relPath || f.webkitRelativePath || f.name;
+async function readEntry(entry, prefix = "") {
+  if (entry.isFile) {
+    const f = await new Promise((res, rej) => entry.file(res, rej));
+    f.relPath = prefix + f.name;
+    return [f];
+  }
+  const reader = entry.createReader(), out = [];
+  for (;;) { // readEntries returns batches until an empty one
+    const batch = await new Promise((res, rej) => reader.readEntries(res, rej));
+    if (!batch.length) return out;
+    for (const e of batch) out.push(...await readEntry(e, `${prefix}${entry.name}/`));
+  }
+}
 const badName = (v) => !v || v === "." || v === ".." || /[\/\\\0]/.test(v);
 
 class FileManagerApp {
@@ -113,6 +128,7 @@ class FileManagerApp {
         <button data-act="newFolder" class="btn w">${icon("newFolder")}<span></span></button>
         <button data-act="newFile" class="btn w">${icon("newFile")}<span></span></button>
         <button data-act="upload" class="btn w">${icon("upload")}<span></span></button>
+        <button data-act="uploadFolder" class="btn icon-only w">${icon("newFolder")}</button>
         <button data-act="download" class="btn w">${icon("download")}<span></span></button>
         <span class="sep w"></span>
         <button data-act="rename" class="btn icon-only w">${icon("rename")}</button>
@@ -145,13 +161,14 @@ class FileManagerApp {
       <div class="fm-menu" role="menu" hidden></div>
       <div class="fm-modal-layer" hidden></div>
       <div class="fm-busy" hidden><span class="spinner"></span></div>
-      <input type="file" class="file-input" multiple hidden>`;
+      <input type="file" class="file-input" multiple hidden>
+      <input type="file" class="dir-input" webkitdirectory hidden>`;
     const $ = (s) => r.querySelector(s);
     this.el = {
       toolbar: $(".fm-toolbar"), crumbs: $(".crumbs"), ro: $(".ro"), body: $(".fm-body"),
       head: $(".fm-head"), checkAll: $(".check-all"), drop: $(".fm-drop"), count: $(".st-count"),
       clip: $(".st-clip"), quota: $(".st-quota"), toasts: $(".fm-toasts"), menu: $(".fm-menu"),
-      modal: $(".fm-modal-layer"), busy: $(".fm-busy"), file: $(".file-input"), search: $(".search input"),
+      modal: $(".fm-modal-layer"), busy: $(".fm-busy"), file: $(".file-input"), dir: $(".dir-input"), search: $(".search input"),
     };
     this.bind();
   }
@@ -218,7 +235,7 @@ class FileManagerApp {
     document.addEventListener("mousedown", this.onDocDown, true);
 
     // upload
-    el.file.addEventListener("change", () => { this.startUpload([...el.file.files]); el.file.value = ""; });
+    for (const inp of [el.file, el.dir]) inp.addEventListener("change", () => { this.startUpload([...inp.files]); inp.value = ""; });
 
     // drag & drop: external files -> upload; internal rows -> move into folder
     el.body.addEventListener("dragstart", (e) => {
@@ -258,10 +275,11 @@ class FileManagerApp {
       this.clearDropTargets();
       if (this.data?.readOnly) return;
       if (isFiles(e)) {
-        const items = [...(e.dataTransfer.items || [])];
-        const dirs = items.filter((it) => it.webkitGetAsEntry?.()?.isDirectory).map((it) => it.getAsFile()?.name);
-        dirs.forEach((n) => this.toast("error", this.t("uploadRejected", { name: n, reason: this.t("reasonDir") })));
-        this.startUpload([...e.dataTransfer.files].filter((f) => !dirs.includes(f.name)));
+        // entries must be taken synchronously, the DataTransfer is emptied after the event
+        const entries = [...(e.dataTransfer.items || [])].map((it) => it.webkitGetAsEntry?.()).filter(Boolean);
+        if (!entries.length) return this.startUpload([...e.dataTransfer.files]);
+        Promise.all(entries.map((en) => readEntry(en))).then((l) => this.startUpload(l.flat()))
+          .catch(() => this.toast("error", this.t("upload_failed", { name: entries[0].name })));
       } else if (this.dragNames) {
         const row = e.target.closest(".row.is-dir");
         if (row && !this.dragNames.includes(row.dataset.name)) {
@@ -466,6 +484,7 @@ class FileManagerApp {
     set("newFolder", true, ro);
     set("newFile", true, ro);
     set("upload", true, ro);
+    set("uploadFolder", true, ro);
     set("download", n > 0);
     set("rename", n === 1, ro);
     set("cut", n > 0, ro);
@@ -566,7 +585,7 @@ class FileManagerApp {
 
   command(act) {
     const ro = this.data?.readOnly;
-    const writeOps = ["newFolder", "newFile", "upload", "rename", "cut", "copy", "paste", "delete"];
+    const writeOps = ["newFolder", "newFile", "upload", "uploadFolder", "rename", "cut", "copy", "paste", "delete"];
     if (ro && writeOps.includes(act)) return;
     const n = this.selection.size;
     switch (act) {
@@ -577,6 +596,7 @@ class FileManagerApp {
         break;
       case "newFile": this.newFile(); break;
       case "upload": this.el.file.click(); break;
+      case "uploadFolder": this.el.dir.click(); break;
       case "download": if (n) this.send("download", { paths: this.selectedPaths() }); break;
       case "open": case "preview": if (n === 1) this.openEntry(this.entry([...this.selection][0])); break;
       case "rename": {
@@ -656,7 +676,7 @@ class FileManagerApp {
         items.push("-", ["delete", "delete", "danger"]);
       }
     } else {
-      if (!ro) items.push(["newFolder", "newFolder"], ["newFile", "newFile"], ["upload", "upload"]);
+      if (!ro) items.push(["newFolder", "newFolder"], ["newFile", "newFile"], ["upload", "upload"], ["uploadFolder", "newFolder"]);
       if (!ro && this.clipboard) items.push(["paste", "paste"]);
       if (items.length) items.push("-");
       items.push(["selectAll", "copy"], ["refresh", "refresh"]);
@@ -819,22 +839,24 @@ class FileManagerApp {
     const ok = [];
     let free = d.quota ? d.quota.limit - d.quota.used : Infinity;
     for (const f of files) {
+      const name = relPath(f);
       const ext = f.name.includes(".") ? f.name.split(".").pop().toLowerCase() : "";
       let reason = null;
       if (d.allowedExt && !d.allowedExt.includes(ext)) reason = this.t("reasonExt");
       else if (d.maxUpload && f.size > d.maxUpload) reason = this.t("reasonSize", { max: d.maxUpload });
       else if (f.size > free) reason = this.t("reasonQuota", { free: Math.max(0, free) });
-      if (reason) { this.toast("error", this.t("uploadRejected", { name: f.name, reason })); continue; }
+      if (reason) { this.toast("error", this.t("uploadRejected", { name, reason })); continue; }
       free -= f.size;
       ok.push(f);
     }
     if (!ok.length) return;
-    const existing = new Set(this.entries.map((e) => e.name));
-    const clashes = ok.filter((f) => existing.has(f.name));
+    // a folder upload clashes on its top folder; overwrite merges into it
+    const tops = new Map(ok.map((f) => { const p = relPath(f).split("/"); return [p[0], p.length > 1]; }));
+    const clashes = [...tops.keys()].filter((n) => this.entry(n));
     const go = (overwrite) => this.uploadFiles(ok, overwrite);
     if (!clashes.length) return go(false);
-    const shown = clashes.slice(0, 5).map((f) => this.t("quote", { name: f.name })).join(", ") + (clashes.length > 5 ? " …" : "");
-    const dirClash = clashes.some((f) => this.entry(f.name)?.is_dir);
+    const shown = clashes.slice(0, 5).map((n) => this.t("quote", { name: n })).join(", ") + (clashes.length > 5 ? " …" : "");
+    const dirClash = clashes.some((n) => this.entry(n).is_dir !== tops.get(n));
     this.confirm(this.t("conflictTitle"), `<p>${this.t("conflictText", { names: shown })}</p>`, [
       { label: this.t("cancel") },
       ...(dirClash ? [] : [{ label: this.t("overwrite"), cls: "danger", run: () => go(true) }]),
@@ -845,7 +867,7 @@ class FileManagerApp {
   async uploadFiles(files, overwrite) {
     const read = (f) => new Promise((res, rej) => {
       const r = new FileReader();
-      r.onload = () => res({ name: f.name, b64: String(r.result).split(",", 2)[1] || "" });
+      r.onload = () => res({ name: relPath(f), b64: String(r.result).split(",", 2)[1] || "" });
       r.onerror = () => rej(r.error);
       r.readAsDataURL(f);
     });

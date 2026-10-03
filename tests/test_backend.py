@@ -187,3 +187,14 @@ def test_create_file(fm):
     assert e.value.code == "exists"
     with pytest.raises(FileManagerError):
         fm.create_file("", "../escape.txt", "x")
+
+
+def test_upload_folder(fm):
+    fm.upload("", [("d/sub/a.txt", b"1"), ("d/b.txt", b"2")])
+    assert (fm.root / "d/sub/a.txt").read_bytes() == b"1"
+    # keep both renames the top folder, overwrite merges into it
+    assert fm.upload("", [("d/b.txt", b"3")]) == ["d (1)/b.txt"]
+    assert fm.upload("", [("d/b.txt", b"4")], overwrite=True) == ["d/b.txt"]
+    assert (fm.root / "d/b.txt").read_bytes() == b"4"
+    with pytest.raises(FileManagerError):
+        fm.upload("", [("d/../x.txt", b"1")])

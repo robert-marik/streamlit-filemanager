@@ -280,15 +280,31 @@ class FileManager:
         return len(pairs)
 
     def upload(self, rel_dir: str, files: list[tuple[str, bytes]], overwrite: bool = False) -> list[str]:
+        """Names may be relative paths ("dir/sub/a.txt") to upload a folder tree.
+        A clashing top folder is merged on overwrite, otherwise renamed."""
         d = self._dir(rel_dir)
         prepared = []
+        tops: dict[str, Path] = {}
         for name, content in files:
-            name = self.check_name(name)
+            parts = [self.check_name(x) for x in (name or "").split("/")]
+            name = parts[-1]
             if self.allowed_extensions is not None and ext_of(name) not in self.allowed_extensions:
                 raise FileManagerError("ext_not_allowed", name=name)
             if self.max_upload_size is not None and len(content) > self.max_upload_size:
                 raise FileManagerError("too_large", name=name, max=self.max_upload_size)
-            target = d / name
+            if len(parts) > 1:
+                if parts[0] not in tops:
+                    top = d / parts[0]
+                    merge = overwrite and top.is_dir() and not top.is_symlink()
+                    tops[parts[0]] = top if merge else _unique(top)
+                target = tops[parts[0]].joinpath(*parts[1:])
+            else:
+                target = d / name
+            anc = target
+            while not os.path.lexists(anc):
+                anc = anc.parent
+            if not self._inside(anc):  # symlink inside a merged folder pointing outside root
+                raise FileManagerError("invalid_path")
             if os.path.lexists(target):
                 if overwrite and target.is_file():
                     pass
@@ -298,8 +314,12 @@ class FileManager:
         replaced = sum(t.stat().st_size for t, _ in prepared if t.is_file())
         self._ensure_space(sum(len(c) for _, c in prepared) - replaced)
         for target, content in prepared:
+            try:
+                target.parent.mkdir(parents=True, exist_ok=True)
+            except (FileExistsError, NotADirectoryError):
+                raise FileManagerError("not_a_dir", name=target.parent.name) from None
             target.write_bytes(content)
-        return [t.name for t, _ in prepared]
+        return [t.relative_to(d).as_posix() for t, _ in prepared]
 
     # ---------------------------------------------------------------- reading
     def download(self, rels: list[str]) -> tuple[str, str, bytes]:

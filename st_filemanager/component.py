@@ -93,7 +93,7 @@ def _handle(fm: FileManager, state: dict, action: dict, read_only: bool) -> None
                     raise FileManagerError("upload_failed", name=f.get("name", "?")) from None
             names = fm.upload(action.get("dir", cwd), files, overwrite=bool(action.get("overwrite")))
             result["paths"] = names
-            flash["select"] = names
+            flash["select"] = list(dict.fromkeys(n.split("/")[0] for n in names))
             flash["notice"] = {"type": "success", "code": "uploaded", "params": {"n": len(names)}}
         elif op == "download":
             name, mime, content = fm.download(action["paths"])

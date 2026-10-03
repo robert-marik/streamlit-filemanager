@@ -80,7 +80,7 @@ before each operation that adds data, so keep it reasonably fast.
 ## Features
 
 - Browsing folders with breadcrumbs, a search filter, and sorting by name, size or date (folders stay on top)
-- Upload with the button or drag & drop, with an overwrite / keep-both prompt on name clashes
+- Upload files or whole folders with the buttons or drag & drop, with an overwrite / keep-both prompt on name clashes
 - Download a file directly, or a folder / several items as a ZIP
 - New folder, new file (paste text from the clipboard and save it; Ctrl+Enter creates), rename, delete (with confirmation), cut / copy / paste, drag rows onto a folder to move (Ctrl = copy)
 - Preview of images and text / source code with syntax highlighting
@@ -155,7 +155,7 @@ the values and set `_language` to the language's own name.
 - Files travel over the Streamlit websocket as base64. Keep `max_upload_size` and
   the sizes of downloads below `server.maxMessageSize` (default 200 MB) divided by about 1.4.
 - Syntax highlighting loads highlight.js from cdn.jsdelivr.net. Offline, text is shown unhighlighted.
-- Whole folders cannot be uploaded, only files.
+- Empty folders are skipped when a folder is uploaded.
 - Text preview shows the first 1 MB; truncated or non-UTF-8 files cannot be edited.
 - A new file created from pasted text is limited to 1 MB and is saved as UTF-8.
   Images larger than 10 MB are not previewed.
