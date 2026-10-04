@@ -17,6 +17,27 @@ from .i18n import Message, resolve_messages
 _log = logging.getLogger(__name__)
 _FRONTEND = Path(__file__).parent / "frontend"
 _component = None
+_size_warned = False
+
+
+def _warn_upload_limit(max_upload: int | None) -> None:
+    """Uploads larger than server.maxWidgetStateSize / 1.4 are dropped by Streamlit."""
+    global _size_warned
+    if _size_warned:
+        return
+    _size_warned = True
+    try:
+        limit = st.get_option("server.maxWidgetStateSize") * 10**6
+    except Exception:  # older Streamlit without this option
+        return
+    if max_upload is None or max_upload * 1.4 > limit:
+        _log.warning(
+            "max_upload_size %s exceeds what server.maxWidgetStateSize (%d MB) lets through "
+            "(about %d MB); raise server.maxWidgetStateSize to at least %s MB.",
+            "unlimited" if max_upload is None else f"{max_upload / 10**6:.0f} MB",
+            limit // 10**6, limit / 1.4 // 10**6,
+            "1.4 × max_upload_size" if max_upload is None else int(max_upload * 1.4 / 10**6) + 1,
+        )
 
 
 def _get_component():
@@ -146,7 +167,8 @@ def file_manager(
     read_only : disable upload / rename / delete / mkdir / new file / move / copy / edit.
     show_hidden : list dot-files.
     max_upload_size : per-file upload limit. Uploads travel over the Streamlit
-        websocket as base64, so keep this below ``server.maxMessageSize`` / 1.4.
+        websocket as base64, so keep this below ``server.maxWidgetStateSize`` / 1.4
+        (the option defaults to 25 MB; raise it in ``.streamlit/config.toml``).
     allowed_extensions : e.g. ["pdf", "png"] to restrict uploads; None = anything.
     lang : UI language as a BCP 47 tag ("en", "cs", "de-AT", ...). None (default)
         uses the browser locale (``st.context.locale``). Falls back to English
@@ -171,6 +193,7 @@ def file_manager(
         allowed_extensions=frozenset(allowed_extensions) if allowed_extensions is not None else None,
         usage=usage,
     )
+    _warn_upload_limit(fm.max_upload_size)
     state = _state(key)
     if lang is None:
         try:

@@ -152,8 +152,17 @@ the values and set `_language` to the language's own name.
 
 ## Limitations
 
-- Files travel over the Streamlit websocket as base64. Keep `max_upload_size` and
-  the sizes of downloads below `server.maxMessageSize` (default 200 MB) divided by about 1.4.
+- Files travel over the Streamlit websocket as base64, one message per upload. Streamlit
+  rejects client messages larger than `server.maxWidgetStateSize` (default 25 MB, i.e.
+  uploads up to about 17 MB). For bigger uploads set it to at least 1.4 × `max_upload_size`:
+
+  ```toml
+  # .streamlit/config.toml
+  [server]
+  maxWidgetStateSize = 200  # MB, uploads up to about 140 MB
+  ```
+
+  Downloads are limited by `server.maxMessageSize` (default 200 MB) divided by about 1.4.
 - Syntax highlighting loads highlight.js from cdn.jsdelivr.net. Offline, text is shown unhighlighted.
 - Empty folders are skipped when a folder is uploaded.
 - Text preview shows the first 1 MB; truncated or non-UTF-8 files cannot be edited.
