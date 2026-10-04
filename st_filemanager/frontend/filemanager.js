@@ -12,6 +12,18 @@ const HIGHLIGHT_LIMIT = 300 * 1024;
 // category ("zero", "one", "two", "few", "many", "other") selected by {n}.
 const SIZE_PARAMS = new Set(["need", "free", "max", "used", "limit", "size"]);
 
+// Streamlit tells components nothing about upload progress. Remember the
+// websocket that sends a big message; its bufferedAmount says how much of it
+// the browser has not sent yet.
+if (!WebSocket.prototype.send.fmWrapped) {
+  const send = WebSocket.prototype.send;
+  WebSocket.prototype.send = function (d) {
+    if (d?.byteLength > 1e6) WebSocket.fmBig = { ws: this, size: d.byteLength };
+    return send.call(this, d);
+  };
+  WebSocket.prototype.send.fmWrapped = true;
+}
+
 const ICON_PATHS = {
   folder: '<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
@@ -160,7 +172,7 @@ class FileManagerApp {
       <div class="fm-toasts" aria-live="polite"></div>
       <div class="fm-menu" role="menu" hidden></div>
       <div class="fm-modal-layer" hidden></div>
-      <div class="fm-busy" hidden><span class="spinner"></span></div>
+      <div class="fm-busy" hidden><span class="spinner"></span><progress max="1" hidden></progress><span class="pct" hidden></span></div>
       <input type="file" class="file-input" multiple hidden>
       <input type="file" class="dir-input" webkitdirectory hidden>`;
     const $ = (s) => r.querySelector(s);
@@ -168,7 +180,7 @@ class FileManagerApp {
       toolbar: $(".fm-toolbar"), crumbs: $(".crumbs"), ro: $(".ro"), body: $(".fm-body"),
       head: $(".fm-head"), checkAll: $(".check-all"), drop: $(".fm-drop"), count: $(".st-count"),
       clip: $(".st-clip"), quota: $(".st-quota"), toasts: $(".fm-toasts"), menu: $(".fm-menu"),
-      modal: $(".fm-modal-layer"), busy: $(".fm-busy"), file: $(".file-input"), dir: $(".dir-input"), search: $(".search input"),
+      modal: $(".fm-modal-layer"), busy: $(".fm-busy"), progress: $(".fm-busy progress"), pct: $(".fm-busy .pct"), file: $(".file-input"), dir: $(".dir-input"), search: $(".search input"),
     };
     this.bind();
   }
@@ -567,6 +579,10 @@ class FileManagerApp {
     this.busy = on;
     clearTimeout(this.busyTimer);
     this.el.busy.hidden = true;
+    if (!on) {
+      clearInterval(this.progressTimer);
+      this.el.progress.hidden = this.el.pct.hidden = true;
+    }
     if (on) {
       // show spinner only for slow operations; never lock the UI forever
       this.busyTimer = setTimeout(() => { this.el.busy.hidden = false; this.busyTimer = setTimeout(() => this.setBusy(false), 60000); }, 250);
@@ -875,11 +891,32 @@ class FileManagerApp {
     try {
       const payload = await Promise.all(files.map(read));
       this.busy = false;
+      WebSocket.fmBig = null;
       this.send("upload", { files: payload, dir: this.cwd, overwrite });
+      this.watchUpload(files[0]?.name);
     } catch (err) {
       this.setBusy(false);
       this.toast("error", this.t("upload_failed", { name: files[0]?.name }));
     }
+  }
+
+  watchUpload(name) {
+    const pct = new Intl.NumberFormat(this.lang, { style: "percent" });
+    this.progressTimer = setInterval(() => {
+      const b = WebSocket.fmBig;
+      if (!b) return;
+      if (b.ws.readyState > WebSocket.OPEN) { // connection lost mid-upload
+        this.setBusy(false);
+        this.toast("error", this.t("upload_failed", { name }));
+        return;
+      }
+      const v = 1 - b.ws.bufferedAmount / b.size;
+      this.el.busy.hidden = this.el.progress.hidden = this.el.pct.hidden = false;
+      this.el.progress.value = v;
+      this.el.pct.textContent = pct.format(Math.floor(v * 100) / 100);
+      // still sending: the 60 s safety unlock counts from the last byte sent
+      if (v < 1) { clearTimeout(this.busyTimer); this.busyTimer = setTimeout(() => this.setBusy(false), 60000); }
+    }, 250);
   }
 
   // --------------------------------------------------------------- toast
