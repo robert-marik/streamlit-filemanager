@@ -198,3 +198,16 @@ def test_upload_folder(fm):
     assert (fm.root / "d/b.txt").read_bytes() == b"4"
     with pytest.raises(FileManagerError):
         fm.upload("", [("d/../x.txt", b"1")])
+
+
+def test_denied_extensions(tmp_path):
+    fm = FileManager(root=tmp_path, denied_extensions=frozenset({".STATE"}))
+    (tmp_path / "a.txt").write_text("x")
+    for op in (lambda: fm.upload("", [("x.state", b"")]),
+               lambda: fm.upload("", [("d/x.State", b"")]),
+               lambda: fm.create_file("", "x.state"),
+               lambda: fm.rename("a.txt", "a.state")):
+        with pytest.raises(FileManagerError, match="ext_not_allowed"):
+            op()
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["a.txt"]
+    fm.upload("", [("x.state.txt", b"")])

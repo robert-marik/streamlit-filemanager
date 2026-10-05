@@ -88,6 +88,8 @@ class FileManager:
     show_hidden: bool = False
     max_upload_size: int | None = None
     allowed_extensions: frozenset[str] | None = None
+    # Never created by upload, rename or new file, whatever allowed_extensions says.
+    denied_extensions: frozenset[str] = frozenset()
     # Custom usage counter for the quota, e.g. when root is a subdirectory of
     # the user's storage: ``usage=lambda: tree_size("/data/user1")``.
     usage: Callable[[], int] | None = None
@@ -99,6 +101,7 @@ class FileManager:
             self.allowed_extensions = frozenset(
                 e.lower().lstrip(".") for e in self.allowed_extensions
             )
+        self.denied_extensions = frozenset(e.lower().lstrip(".") for e in self.denied_extensions)
 
     # ------------------------------------------------------------------ paths
     def resolve(self, rel: str) -> Path:
@@ -136,6 +139,12 @@ class FileManager:
             or len(name.encode()) > 255
         ):
             raise FileManagerError("invalid_name", name=name)
+        return name
+
+    def check_new_name(self, name: str) -> str:
+        name = self.check_name(name)
+        if ext_of(name) in self.denied_extensions:
+            raise FileManagerError("ext_not_allowed", name=name)
         return name
 
     def _existing(self, rel: str) -> Path:
@@ -206,7 +215,7 @@ class FileManager:
 
     def create_file(self, rel_dir: str, name: str, text: str = "") -> str:
         """Create a new text file (UTF-8), e.g. from pasted clipboard content."""
-        target = self._dir(rel_dir) / self.check_name(name)
+        target = self._dir(rel_dir) / self.check_new_name(name)
         if os.path.lexists(target):
             raise FileManagerError("exists", name=name)
         data = text.encode("utf-8")
@@ -221,7 +230,7 @@ class FileManager:
         src = self._existing(rel)
         if src == self.root:
             raise FileManagerError("invalid_path")
-        dst = src.parent / self.check_name(new_name)
+        dst = src.parent / self.check_new_name(new_name)
         if dst == src:
             return rel
         # Allow case-only renames on case-insensitive filesystems.
@@ -287,7 +296,7 @@ class FileManager:
         tops: dict[str, Path] = {}
         for name, content in files:
             parts = [self.check_name(x) for x in (name or "").split("/")]
-            name = parts[-1]
+            name = self.check_new_name(parts[-1])
             if self.allowed_extensions is not None and ext_of(name) not in self.allowed_extensions:
                 raise FileManagerError("ext_not_allowed", name=name)
             if self.max_upload_size is not None and len(content) > self.max_upload_size:

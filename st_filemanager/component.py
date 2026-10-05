@@ -152,6 +152,7 @@ def file_manager(
     show_hidden: bool = False,
     max_upload_size: int | str | None = "100MB",
     allowed_extensions: list[str] | None = None,
+    denied_extensions: list[str] | None = None,
     lang: str | None = None,
     translations: Mapping[str, Message] | None = None,
     usage: Callable[[], int] | None = None,
@@ -170,6 +171,7 @@ def file_manager(
         websocket as base64, so keep this below ``server.maxWidgetStateSize`` / 1.4
         (the option defaults to 25 MB; raise it in ``.streamlit/config.toml``).
     allowed_extensions : e.g. ["pdf", "png"] to restrict uploads; None = anything.
+    denied_extensions : e.g. ["exe"]; such files cannot be uploaded, created or renamed to.
     lang : UI language as a BCP 47 tag ("en", "cs", "de-AT", ...). None (default)
         uses the browser locale (``st.context.locale``). Falls back to English
         when no translation is available; see ``available_languages()``.
@@ -191,6 +193,7 @@ def file_manager(
         show_hidden=show_hidden,
         max_upload_size=parse_size(max_upload_size),
         allowed_extensions=frozenset(allowed_extensions) if allowed_extensions is not None else None,
+        denied_extensions=frozenset(denied_extensions or ()),
         usage=usage,
     )
     _warn_upload_limit(fm.max_upload_size)

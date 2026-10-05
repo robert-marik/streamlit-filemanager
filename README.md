@@ -52,6 +52,7 @@ if st.button("Open files"):
 | `show_hidden` | `False` | List dot-files. |
 | `max_upload_size` | `"100MB"` | Per-file upload limit. |
 | `allowed_extensions` | `None` | e.g. `["pdf", "png"]` to restrict uploads. |
+| `denied_extensions` | `None` | e.g. `["exe"]`: such files cannot be uploaded, created or renamed to. |
 | `lang` | `None` | UI language (BCP 47 tag). `None` = browser locale, falling back to English. |
 | `translations` | `None` | Per-instance message overrides, e.g. `{"upload": "Add files"}`. |
 | `usage` | `None` | Callable returning the bytes counted against `quota`. `None` = size of `root`. See [Custom quota usage](#custom-quota-usage). |
