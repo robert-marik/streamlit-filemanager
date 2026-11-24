@@ -38,6 +38,7 @@ const ICON_PATHS = {
   upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/>',
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/>',
   newFolder: '<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10v6M9 13h6"/>',
+  folderUpload: '<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 17v-6M9 13.5l3-3 3 3"/>',
   newFile: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 11v6M9 14h6"/>',
   rename: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   delete: '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
@@ -140,7 +141,7 @@ class FileManagerApp {
         <button data-act="newFolder" class="btn w">${icon("newFolder")}<span></span></button>
         <button data-act="newFile" class="btn w">${icon("newFile")}<span></span></button>
         <button data-act="upload" class="btn w">${icon("upload")}<span></span></button>
-        <button data-act="uploadFolder" class="btn icon-only w">${icon("newFolder")}</button>
+        <button data-act="uploadFolder" class="btn w">${icon("folderUpload")}<span></span></button>
         <button data-act="download" class="btn w">${icon("download")}<span></span></button>
         <span class="sep w"></span>
         <button data-act="rename" class="btn icon-only w">${icon("rename")}</button>
@@ -692,7 +693,7 @@ class FileManagerApp {
         items.push("-", ["delete", "delete", "danger"]);
       }
     } else {
-      if (!ro) items.push(["newFolder", "newFolder"], ["newFile", "newFile"], ["upload", "upload"], ["uploadFolder", "newFolder"]);
+      if (!ro) items.push(["newFolder", "newFolder"], ["newFile", "newFile"], ["upload", "upload"], ["uploadFolder", "folderUpload"]);
       if (!ro && this.clipboard) items.push(["paste", "paste"]);
       if (items.length) items.push("-");
       items.push(["selectAll", "copy"], ["refresh", "refresh"]);
